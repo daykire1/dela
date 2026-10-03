@@ -1,7 +1,16 @@
 # Генератор иконок приложения «Мои дела» (PNG 192/512 + maskable)
+# Фон — фиолетовый диагональный градиент, галочка белая.
 Add-Type -AssemblyName System.Drawing
 
-$BG = [System.Drawing.Color]::FromArgb(255, 5, 150, 105)  # #059669
+$GRAD_FROM = [System.Drawing.Color]::FromArgb(255, 168, 85, 247)  # #A855F7
+$GRAD_TO   = [System.Drawing.Color]::FromArgb(255, 109, 40, 217)  # #6D28D9
+
+function New-GradientBrush {
+  param([int]$Size)
+  $rect = New-Object System.Drawing.RectangleF 0, 0, $Size, $Size
+  $mode = [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal
+  New-Object System.Drawing.Drawing2D.LinearGradientBrush -ArgumentList $rect, $GRAD_FROM, $GRAD_TO, $mode
+}
 
 function New-Icon {
   param([int]$Size, [string]$Path, [double]$CheckScale, [switch]$FullBleed)
@@ -11,7 +20,10 @@ function New-Icon {
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 
   if ($FullBleed) {
-    $g.Clear($BG)   # маскируемая иконка: сплошной фон, содержимое в безопасной зоне
+    # маскируемая иконка: градиент на весь квадрат, содержимое в безопасной зоне
+    $grad = New-GradientBrush $Size
+    $g.FillRectangle($grad, 0, 0, $Size, $Size)
+    $grad.Dispose()
   } else {
     $g.Clear([System.Drawing.Color]::Transparent)
     $r = $Size * 0.22
@@ -21,9 +33,9 @@ function New-Icon {
     $p.AddArc($Size - 2 * $r, $Size - 2 * $r, 2 * $r, 2 * $r, 0, 90)
     $p.AddArc(0, $Size - 2 * $r, 2 * $r, 2 * $r, 90, 90)
     $p.CloseFigure()
-    $brush = New-Object System.Drawing.SolidBrush $BG
-    $g.FillPath($brush, $p)
-    $brush.Dispose(); $p.Dispose()
+    $grad = New-GradientBrush $Size
+    $g.FillPath($grad, $p)
+    $grad.Dispose(); $p.Dispose()
   }
 
   # галочка: нормализованные точки (0..1), масштабируются вокруг центра
