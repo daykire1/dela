@@ -65,6 +65,6 @@ function New-Icon {
 
 $dir = Join-Path $PSScriptRoot 'icons'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
-New-Icon -Size 192 -Path (Join-Path $dir 'icon-192.png') -CheckScale 1.0
-New-Icon -Size 512 -Path (Join-Path $dir 'icon-512.png') -CheckScale 1.0
-New-Icon -Size 512 -Path (Join-Path $dir 'icon-maskable-512.png') -CheckScale 0.62 -FullBleed
+New-Icon -Size 192 -Path (Join-Path $dir 'icon-192-v2.png') -CheckScale 1.0
+New-Icon -Size 512 -Path (Join-Path $dir 'icon-512-v2.png') -CheckScale 1.0
+New-Icon -Size 512 -Path (Join-Path $dir 'icon-maskable-512-v2.png') -CheckScale 0.62 -FullBleed

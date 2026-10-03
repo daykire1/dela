@@ -1,13 +1,13 @@
 /* Сервис-воркер «Мои дела»: кэширует файлы приложения для работы офлайн.
    При обновлении приложения увеличьте номер версии в CACHE — старый кэш удалится сам. */
-const CACHE = 'dela-v2';
+const CACHE = 'dela-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-512.png',
+  './icons/icon-192-v2.png',
+  './icons/icon-512-v2.png',
+  './icons/icon-maskable-512-v2.png',
 ];
 
 self.addEventListener('install', (e) => {
