@@ -1,10 +1,10 @@
 /* Сервис-воркер «Мои дела»: кэширует файлы приложения для работы офлайн.
    При обновлении приложения увеличьте номер версии в CACHE — старый кэш удалится сам. */
-const CACHE = 'dela-v3';
+const CACHE = 'dela-v4';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.webmanifest',
+  './manifest-v2.webmanifest',
   './icons/icon-192-v2.png',
   './icons/icon-512-v2.png',
   './icons/icon-maskable-512-v2.png',
