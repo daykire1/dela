@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Простой трекер дел: отметил — и дело ушло с экрана">
+<meta name="theme-color" content="#F6F7F6">
+<title>Мои дела</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  /* ================= темы ================= */
+  .light {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --text: #1B1D1E;
+    --text2: #6C7378;
+    --divider: #E6E9E8;
+    --accent: #059669;
+    --accent-soft: #D9F2E6;
+    --danger: #DC2626;
+    --check-border: #C3C9CC;
+    --snack-bg: #2B2F2D;
+    --snack-text: #ECEDEE;
+  }
+  .dark {
+    --bg: #000000;
+    --surface: #151716;
+    --text: #ECEDEE;
+    --text2: #99A1A6;
+    --divider: #262928;
+    --accent: #34D399;
+    --accent-soft: #103125;
+    --danger: #F87171;
+    --check-border: #4A5155;
+    --snack-bg: #2B2F2D;
+    --snack-text: #ECEDEE;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Segoe UI', Roboto, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button { font-family: inherit; }
+  svg { display: block; }
+
+  /* ================= экраны ================= */
+  .view {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    color: var(--text);
+    display: flex; flex-direction: column;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    transition: transform .25s ease, visibility 0s linear .25s;
+    visibility: hidden;
+  }
+  .view.active { transform: none; visibility: visible; transition: transform .25s ease; }
+  #view-main { transform: translateX(0); }
+  #view-settings { transform: translateX(100%); }
+  #view-settings.active { transform: none; }
+
+  /* ================= шапка ================= */
+  .app-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px 4px;
+    flex: none;
+  }
+  .app-head h1, .nav-head h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; }
+
+  .nav-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 12px 12px 8px;
+    flex: none;
+  }
+
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2); cursor: pointer; border: none; background: transparent;
+    flex: none;
+  }
+  .icon-btn:active { background: var(--divider); }
+
+  /* ================= прогресс ================= */
+  .progress { padding: 10px 22px 8px; flex: none; }
+  .progress .label { font-size: 13.5px; color: var(--text2); margin-bottom: 8px; }
+  .progress .label b { color: var(--text); font-weight: 700; }
+  .bar { height: 6px; border-radius: 99px; background: var(--divider); overflow: hidden; }
+  .bar i {
+    display: block; height: 100%; width: 0;
+    border-radius: 99px; background: var(--accent);
+    transition: width .3s ease;
+  }
+
+  /* ================= список дел ================= */
+  .tasks { flex: 1; overflow-y: auto; padding-top: 6px; overscroll-behavior: contain; }
+
+  .task {
+    display: flex; align-items: center; gap: 16px;
+    width: 100%; text-align: left;
+    min-height: 66px; padding: 8px 22px;
+    background: transparent; border: none; color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    overflow: hidden;
+    transition: height .26s ease, min-height .26s ease, padding .26s ease,
+                opacity .26s ease, transform .26s ease;
+  }
+  .task + .task { border-top: 1px solid var(--divider); }
+  .task .txt { font-size: 16.5px; line-height: 1.35; }
+
+  .check {
+    flex: none; width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--check-border);
+    display: flex; align-items: center; justify-content: center;
+    color: transparent;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .task.done .check { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .task.done .txt { color: var(--text2); text-decoration: line-through; text-decoration-color: var(--text2); }
+
+  .task.leaving {
+    height: 0 !important; min-height: 0; padding-top: 0; padding-bottom: 0;
+    opacity: 0; transform: translateX(48px);
+    border-top-color: transparent;
+  }
+
+  /* пустые состояния */
+  .empty {
+    margin: auto; text-align: center; padding: 24px;
+    color: var(--text2); user-select: none;
+  }
+  .empty .emoji { font-size: 44px; margin-bottom: 12px; }
+  .empty .title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .empty .hint { font-size: 14.5px; line-height: 1.45; }
+
+  /* ================= плашка «Отменить» ================= */
+  .snack {
+    position: fixed; left: 16px; right: 16px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    background: var(--snack-bg); color: var(--snack-text);
+    border-radius: 12px; padding: 13px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14.5px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35);
+    animation: snack-in .2s ease;
+    z-index: 50;
+  }
+  .snack[hidden] { display: none; }
+  .snack .undo {
+    color: var(--accent); font-weight: 700; cursor: pointer;
+    background: none; border: none; font-size: 14.5px;
+    padding: 4px 0 4px 16px;
+  }
+  @keyframes snack-in { from { transform: translateY(12px); opacity: 0; } }
+
+  /* ================= настройки ================= */
+  .settings { flex: 1; overflow-y: auto; padding-bottom: 40px; overscroll-behavior: contain; }
+
+  .section { padding: 16px 22px 2px; }
+  .section > .sec-title {
+    font-size: 12px; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text2); margin-bottom: 4px;
+  }
+
+  .add-row { display: flex; gap: 10px; margin: 10px 0 6px; }
+  .add-row input, .rename-input {
+    min-width: 0;
+    border: 1.5px solid var(--check-border); border-radius: 12px;
+    background: var(--surface); color: var(--text);
+    font-size: 16px; padding: 11px 14px; outline: none;
+    font-family: inherit;
+  }
+  .add-row input { flex: 1; }
+  .add-row input:focus, .rename-input:focus { border-color: var(--accent); }
+  .add-row input::placeholder, .rename-input::placeholder { color: var(--text2); }
+  .add-row input.shake { animation: shake .35s; border-color: var(--danger); }
+  @keyframes shake {
+    20% { transform: translateX(-5px); } 40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+  }
+  .btn {
+    border: none; border-radius: 12px; padding: 0 18px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    flex: none;
+  }
+  .btn:active { filter: brightness(.92); }
+
+  .edit-task {
+    display: flex; align-items: center; gap: 2px;
+    min-height: 56px;
+  }
+  .edit-task + .edit-task { border-top: 1px solid var(--divider); }
+  .txt-btn {
+    flex: 1; min-width: 0; text-align: left;
+    background: none; border: none; color: inherit; cursor: pointer;
+    font-size: 15.5px; padding: 10px 8px 10px 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .rename-input { flex: 1; padding: 8px 12px; }
+  .mini {
+    width: 40px; height: 40px; border-radius: 10px; border: none;
+    background: transparent; color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .mini:active { background: var(--divider); }
+  .mini:disabled { opacity: .3; cursor: default; }
+  .mini:disabled:active { background: transparent; }
+  .mini.del:active { color: var(--danger); }
+  .list-note { font-size: 14px; color: var(--text2); padding: 12px 0 6px; }
+
+  .done-item {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 56px;
+  }
+  .done-item + .done-item { border-top: 1px solid var(--divider); }
+  .done-item .col { flex: 1; min-width: 0; }
+  .done-item .t { font-size: 15px; color: var(--text2); text-decoration: line-through; }
+  .done-item .d { font-size: 12.5px; color: var(--text2); margin-top: 2px; }
+  .restore {
+    border: none; background: transparent; color: var(--accent);
+    font-size: 14px; font-weight: 700; cursor: pointer; flex: none;
+    padding: 8px;
+  }
+  .clear-all {
+    border: none; background: transparent; color: var(--danger);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 12px 0 4px;
+  }
+
+  .seg {
+    display: flex; background: var(--surface); border: 1px solid var(--divider);
+    border-radius: 14px; padding: 4px; margin-top: 10px;
+  }
+  .seg button {
+    flex: 1; border: none; border-radius: 10px; padding: 10px 0;
+    background: transparent; color: var(--text2);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); }
+</style>
+</head>
+<body class="light">
+
+<!-- ================= ГЛАВНЫЙ ЭКРАН ================= -->
+<div id="view-main" class="view light active">
+  <header class="app-head">
+    <h1>Мои дела</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="Настройки">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></svg>
+    </button>
+  </header>
+  <div class="progress" id="progress-block">
+    <div class="label" id="progress-label"></div>
+    <div class="bar"><i id="progress-fill"></i></div>
+  </div>
+  <div class="tasks" id="task-list"></div>
+</div>
+
+<!-- ================= НАСТРОЙКИ ================= -->
+<div id="view-settings" class="view light">
+  <header class="nav-head">
+    <button id="btn-back" class="icon-btn" aria-label="Назад">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    </button>
+    <h1>Настройки</h1>
+  </header>
+  <div class="settings">
+    <div class="section">
+      <div class="sec-title">Список дел</div>
+      <div class="add-row">
+        <input id="new-task-input" type="text" placeholder="Новое дело" maxlength="200" autocomplete="off">
+        <button id="btn-add" class="btn">Добавить</button>
+      </div>
+      <div id="edit-list"></div>
+    </div>
+    <div class="section" id="done-section" hidden>
+      <div class="sec-title">Выполненные · <span id="done-count">0</span></div>
+      <div id="done-list"></div>
+      <button id="btn-clear" class="clear-all">Очистить всё</button>
+    </div>
+    <div class="section">
+      <div class="sec-title">Тема</div>
+      <div class="seg" id="theme-seg">
+        <button data-theme="system">Системная</button>
+        <button data-theme="light">Светлая</button>
+        <button data-theme="dark">Тёмная</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="snackbar" class="snack" hidden>
+  <span id="snack-text"></span>
+  <button id="snack-undo" class="undo">Отменить</button>
+</div>
+
+<script>
+'use strict';
+
+/* ================= данные ================= */
+const STORE_KEY = 'dela.data.v1';
+
+/* Стартовый список дел — показывается при первом запуске,
+   пока не сохранены изменения пользователя. */
+const DEFAULT_TASKS = [
+  'Сп на уценку',
+  'Сигареты',
+  'Проверить урну',
+  'Пиво на налипашки',
+  'Крепкий заказать',
+  'Акты',
+  'Ценники с приходов',
+  'Отчёт',
+  'Табель',
+  'Рейтинг',
+  'Инверка',
+  'Приходы',
+  'Возврат на склад',
+  'Крепкий списать',
+  'Подать на вес.',
+  'Документы в офис',
+  'Переоценка',
+  'Возврат корректировки',
+  'Брак уценка',
+  'Морозилка',
+  'Акцизы отработать',
+  'Пиво списать',
+  'Подать уволенных',
+  'Мельниченко',
+  'Сигареты заказать',
+  'Документы внешников в офис',
+  'Под кассами',
+  'Выкладка алко',
+  'Мерси',
+  'Списано чеком',
+  'Ценники в зале',
+];
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* приватный режим */ }
+}
+
+function loadState() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (d && Array.isArray(d.tasks)) {
+      return { tasks: d.tasks.filter(t => t && t.id && typeof t.title === 'string'), theme: d.theme || 'system' };
+    }
+  } catch (e) { /* повреждённые данные — начинаем с чистого листа */ }
+  return {
+    tasks: DEFAULT_TASKS.map(title => ({ id: uid(), title, done: false, doneAt: null })),
+    theme: 'system',
+  };
+}
+
+const state = loadState();
+
+const activeTasks = () => state.tasks.filter(t => !t.done);
+const doneTasks = () => state.tasks.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+
+/* ================= утилиты ================= */
+function el(tag, className, text) {
+  const n = document.createElement(tag);
+  if (className) n.className = className;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+const CHECK_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg>';
+const UP_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const DOWN_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+const X_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+function iconButton(className, svg, label) {
+  const b = el('button', 'mini ' + className);
+  b.innerHTML = svg;
+  b.setAttribute('aria-label', label);
+  return b;
+}
+
+function isToday(ts) {
+  if (!ts) return false;
+  const d = new Date(ts), n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts), now = new Date();
+  const opt = { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
+  if (d.getFullYear() !== now.getFullYear()) opt.year = 'numeric';
+  return d.toLocaleString('ru-RU', opt);
+}
+
+/* ================= тема ================= */
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+
+function applyTheme() {
+  const dark = state.theme === 'dark' || (state.theme === 'system' && themeMedia.matches);
+  ['view-main', 'view-settings'].forEach(id => {
+    const v = document.getElementById(id);
+    v.classList.toggle('light', !dark);
+    v.classList.toggle('dark', dark);
+  });
+  document.body.classList.toggle('light', !dark);
+  document.body.classList.toggle('dark', dark);
+  themeColorMeta.content = dark ? '#000000' : '#F6F7F6';
+  document.querySelectorAll('#theme-seg button').forEach(b =>
+    b.classList.toggle('on', b.dataset.theme === state.theme));
+}
+themeMedia.addEventListener('change', () => { if (state.theme === 'system') applyTheme(); });
+
+/* ================= главный экран ================= */
+const taskList = document.getElementById('task-list');
+const progressBlock = document.getElementById('progress-block');
+const progressLabel = document.getElementById('progress-label');
+const progressFill = document.getElementById('progress-fill');
+
+function renderMain() {
+  taskList.innerHTML = '';
+  const active = activeTasks();
+  const doneToday = state.tasks.filter(t => t.done && isToday(t.doneAt)).length;
+  const total = doneToday + active.length;
+
+  progressBlock.style.display = total === 0 ? 'none' : '';
+  progressLabel.innerHTML = '';
+  progressLabel.append('Выполнено ');
+  progressLabel.append(el('b', '', doneToday + ' из ' + total));
+  progressFill.style.width = total ? Math.round(doneToday / total * 100) + '%' : '0';
+
+  if (active.length === 0) {
+    const box = el('div', 'empty');
+    if (state.tasks.length === 0) {
+      box.append(el('div', 'emoji', '📝'));
+      box.append(el('div', 'title', 'Пока пусто'));
+      box.append(el('div', 'hint', 'Нажмите на шестерёнку вверху,\nчтобы добавить дела'));
+    } else {
+      box.append(el('div', 'emoji', '🎉'));
+      box.append(el('div', 'title', 'Всё выполнено!'));
+      box.append(el('div', 'hint', 'Новых дел нет — можно отдыхать'));
+    }
+    taskList.append(box);
+    return;
+  }
+
+  active.forEach(t => {
+    const row = el('button', 'task');
+    row.dataset.id = t.id;
+    const check = el('span', 'check');
+    check.innerHTML = CHECK_SVG;
+    row.append(check, el('span', 'txt', t.title));
+    taskList.append(row);
+  });
+}
+
+taskList.addEventListener('click', e => {
+  const row = e.target.closest('.task');
+  if (!row || row.classList.contains('leaving')) return;
+  completeTask(row.dataset.id, row);
+});
+
+function completeTask(id, row) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || t.done) return;
+
+  row.style.height = row.offsetHeight + 'px';
+  void row.offsetHeight; /* фиксируем высоту до анимации */
+  row.classList.add('leaving');
+
+  setTimeout(() => {
+    t.done = true;
+    t.doneAt = Date.now();
+    save();
+    undoAction = { type: 'complete', taskId: id };
+    renderMain();
+    showSnack('Дело выполнено');
+  }, 270);
+}
+
+/* ================= плашка «Отменить» ================= */
+const snackbar = document.getElementById('snackbar');
+const snackText = document.getElementById('snack-text');
+let undoAction = null;
+let snackTimer = null;
+
+function showSnack(text) {
+  snackText.textContent = text;
+  snackbar.hidden = false;
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(hideSnack, 5000);
+}
+function hideSnack() {
+  clearTimeout(snackTimer);
+  snackbar.hidden = true;
+  undoAction = null;
+}
+
+document.getElementById('snack-undo').addEventListener('click', () => {
+  if (!undoAction) return;
+  const t = state.tasks.find(x => x.id === undoAction.taskId);
+  if (undoAction.type === 'complete' && t) {
+    t.done = false;
+    t.doneAt = null;
+  } else if (undoAction.type === 'delete') {
+    const i = Math.min(undoAction.index, state.tasks.length);
+    state.tasks.splice(i, 0, undoAction.prev);
+  }
+  save();
+  undoAction = null;
+  clearTimeout(snackTimer);
+  snackbar.hidden = true;
+  renderMain();
+  renderSettings();
+});
+
+/* ================= настройки ================= */
+const editList = document.getElementById('edit-list');
+const doneSection = document.getElementById('done-section');
+const doneList = document.getElementById('done-list');
+const doneCount = document.getElementById('done-count');
+const newTaskInput = document.getElementById('new-task-input');
+
+function renderSettings() {
+  /* --- редактирование списка --- */
+  editList.innerHTML = '';
+  const active = activeTasks();
+
+  if (active.length === 0) {
+    editList.append(el('div', 'list-note',
+      state.tasks.length === 0 ? 'Список пуст — добавьте дело выше'
+                               : 'Все дела выполнены — добавьте новые'));
+  }
+
+  active.forEach((t, i) => {
+    const row = el('div', 'edit-task');
+    row.dataset.id = t.id;
+    const txt = el('button', 'txt-btn', t.title);
+    txt.setAttribute('aria-label', 'Переименовать: ' + t.title);
+    row.append(txt,
+      iconButton('up', UP_SVG, 'Выше'),
+      iconButton('down', DOWN_SVG, 'Ниже'),
+      iconButton('del', X_SVG, 'Удалить'));
+    row.querySelector('.up').disabled = i === 0;
+    row.querySelector('.down').disabled = i === active.length - 1;
+    editList.append(row);
+  });
+
+  /* --- выполненные --- */
+  const done = doneTasks();
+  doneSection.hidden = done.length === 0;
+  doneCount.textContent = done.length;
+  doneList.innerHTML = '';
+  done.forEach(t => {
+    const row = el('div', 'done-item');
+    row.dataset.id = t.id;
+    const col = el('div', 'col');
+    col.append(el('div', 't', t.title), el('div', 'd', fmtDate(t.doneAt || Date.now())));
+    row.append(col, el('button', 'restore', 'Вернуть'));
+    doneList.append(row);
+  });
+}
+
+/* добавление */
+function addTask() {
+  const v = newTaskInput.value.trim();
+  if (!v) {
+    newTaskInput.classList.remove('shake');
+    void newTaskInput.offsetWidth;
+    newTaskInput.classList.add('shake');
+    newTaskInput.focus();
+    return;
+  }
+  state.tasks.push({ id: uid(), title: v, done: false, doneAt: null });
+  save();
+  newTaskInput.value = '';
+  renderSettings();
+  newTaskInput.focus();
+}
+document.getElementById('btn-add').addEventListener('click', addTask);
+newTaskInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+/* редактирование: переименование, порядок, удаление */
+editList.addEventListener('click', e => {
+  const row = e.target.closest('.edit-task');
+  if (!row) return;
+  const t = state.tasks.find(x => x.id === row.dataset.id);
+  if (!t || t.done) return;
+
+  if (e.target.closest('.txt-btn')) return startRename(t, e.target.closest('.txt-btn'));
+  if (e.target.closest('.up')) return reorderActive(t.id, -1);
+  if (e.target.closest('.down')) return reorderActive(t.id, +1);
+  if (e.target.closest('.del')) return deleteTask(t, row);
+});
+
+function startRename(t, txtBtn) {
+  const input = document.createElement('input');
+  input.className = 'rename-input';
+  input.value = t.title;
+  input.maxLength = 200;
+  txtBtn.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let closed = false;
+  const commit = doSave => {
+    if (closed) return;
+    closed = true;
+    if (doSave) {
+      const v = input.value.trim();
+      if (v && v !== t.title) { t.title = v; save(); }
+    }
+    renderSettings();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commit(true);
+    else if (e.key === 'Escape') commit(false);
+  });
+  input.addEventListener('blur', () => commit(true));
+}
+
+function reorderActive(id, dir) {
+  const act = state.tasks.filter(t => !t.done);
+  const pos = act.findIndex(t => t.id === id);
+  const to = pos + dir;
+  if (pos < 0 || to < 0 || to >= act.length) return;
+  [act[pos], act[to]] = [act[to], act[pos]];
+  const queue = act.slice(); /* активные слоты заполняем новым порядком по одному */
+  state.tasks = state.tasks.map(slot => (slot && slot.done) ? slot : queue.shift());
+  save();
+  renderSettings();
+}
+
+function deleteTask(t, row) {
+  undoAction = { type: 'delete', taskId: t.id, index: state.tasks.indexOf(t), prev: { ...t } };
+  state.tasks = state.tasks.filter(x => x.id !== t.id);
+  save();
+  renderSettings();
+  showSnack('Дело удалено');
+}
+
+/* выполненные: вернуть / очистить */
+doneList.addEventListener('click', e => {
+  const btn = e.target.closest('.restore');
+  if (!btn) return;
+  const row = e.target.closest('.done-item');
+  const t = state.tasks.find(x => x.id === row.dataset.id);
+  if (!t) return;
+  t.done = false;
+  t.doneAt = null;
+  save();
+  renderSettings();
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (!doneTasks().length) return;
+  if (!confirm('Удалить всю историю выполненных дел?')) return;
+  state.tasks = state.tasks.filter(t => !t.done);
+  save();
+  renderSettings();
+});
+
+/* тема */
+document.getElementById('theme-seg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-theme]');
+  if (!b) return;
+  state.theme = b.dataset.theme;
+  save();
+  applyTheme();
+});
+
+/* ================= навигация ================= */
+const viewMain = document.getElementById('view-main');
+const viewSettings = document.getElementById('view-settings');
+
+function showMain() {
+  hideSnack();
+  renderMain();
+  viewSettings.classList.remove('active');
+  viewMain.classList.add('active');
+}
+function showSettings() {
+  hideSnack();
+  renderSettings();
+  viewMain.classList.remove('active');
+  viewSettings.classList.add('active');
+}
+
+document.getElementById('btn-settings').addEventListener('click', showSettings);
+document.getElementById('btn-back').addEventListener('click', showMain);
+
+/* ================= запуск ================= */
+applyTheme();
+renderMain();
+renderSettings();
+
+if (navigator.serviceWorker && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('./sw.js').catch(() => { /* без офлайна тоже работает */ });
+}
+</script>
+</body>
+</html>

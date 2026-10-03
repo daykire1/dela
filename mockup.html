@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Макет — Мои дела</title>
+<style>
+  /* ===== палитра приложения ===== */
+  .light {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --text: #1B1D1E;
+    --text2: #6C7378;
+    --divider: #E6E9E8;
+    --accent: #059669;
+    --accent-soft: #D9F2E6;
+    --danger: #DC2626;
+    --check-border: #C3C9CC;
+  }
+  .dark {
+    --bg: #000000;
+    --surface: #151716;
+    --text: #ECedee;
+    --text2: #99A1A6;
+    --divider: #262928;
+    --accent: #34D399;
+    --accent-soft: #103125;
+    --danger: #F87171;
+    --check-border: #4A5155;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Roboto, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: #E8EAED;
+    padding: 36px 24px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-head { max-width: 1500px; margin: 0 auto 34px; color: #3C4043; }
+  .page-head h1 { font-size: 24px; font-weight: 700; }
+  .page-head p  { font-size: 15px; color: #6C7378; margin-top: 6px; line-height: 1.5; }
+
+  .frames { display: flex; flex-wrap: wrap; gap: 44px; justify-content: center; }
+
+  .figure { text-align: center; }
+  .figure .caption { margin-top: 14px; font-size: 14px; font-weight: 600; color: #3C4043; }
+
+  /* ===== рамка телефона ===== */
+  .phone {
+    display: inline-block; text-align: left;
+    border: 10px solid #17181A;
+    border-radius: 34px;
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(0,0,0,.28);
+  }
+  .screen {
+    width: 330px; height: 716px;
+    background: var(--bg);
+    color: var(--text);
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===== статус-бар ===== */
+  .status {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 22px 6px;
+    font-size: 13px; font-weight: 600;
+    flex: none;
+  }
+  .status .icons { display: flex; gap: 6px; align-items: center; }
+
+  /* ===== главный экран ===== */
+  .app-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px 4px;
+    flex: none;
+  }
+  .app-head h2 { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; }
+  .icon-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2); cursor: pointer; border: none; background: transparent;
+  }
+  .icon-btn:hover { background: var(--divider); }
+
+  .progress { padding: 10px 22px 6px; flex: none; }
+  .progress .label { font-size: 13.5px; color: var(--text2); margin-bottom: 8px; }
+  .progress .label b { color: var(--text); font-weight: 700; }
+  .bar { height: 6px; border-radius: 99px; background: var(--divider); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 40%; border-radius: 99px; background: var(--accent); }
+
+  .tasks { flex: 1; overflow-y: auto; padding-top: 6px; }
+  .task {
+    display: flex; align-items: center; gap: 16px;
+    min-height: 66px; padding: 8px 22px;
+    cursor: pointer;
+  }
+  .task + .task { border-top: 1px solid var(--divider); }
+  .task .txt { font-size: 16.5px; line-height: 1.35; }
+
+  .check {
+    flex: none; width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--check-border);
+    display: flex; align-items: center; justify-content: center;
+    color: transparent; background: transparent;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .task.done .check { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .task.done .txt { color: var(--text2); text-decoration: line-through; text-decoration-color: var(--text2); }
+
+  .fab {
+    position: absolute; right: 20px; bottom: 26px;
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, .4);
+    cursor: pointer; border: none;
+  }
+  .dark .fab { box-shadow: 0 6px 16px rgba(52, 211, 153, .25); }
+
+  /* плашка «Отменить» (показана для примера на тёмном экране) */
+  .snack {
+    position: absolute; left: 16px; right: 16px; bottom: 24px;
+    background: #2B2F2D; color: #ECEDEE;
+    border-radius: 12px; padding: 13px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14.5px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+  .snack .undo { color: #34D399; font-weight: 700; cursor: pointer; }
+
+  /* ===== настройки ===== */
+  .nav-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 14px 12px 8px; flex: none;
+  }
+  .nav-head h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+
+  .settings { flex: 1; overflow-y: auto; padding-bottom: 30px; }
+  .section { padding: 16px 22px 2px; }
+  .section > .sec-title {
+    font-size: 12px; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text2); margin-bottom: 4px;
+  }
+
+  .add-row { display: flex; gap: 10px; margin: 10px 0 6px; }
+  .add-row input {
+    flex: 1; min-width: 0;
+    border: 1.5px solid var(--check-border); border-radius: 12px;
+    background: var(--surface); color: var(--text);
+    font-size: 15px; padding: 11px 14px; outline: none;
+    font-family: inherit;
+  }
+  .add-row input:focus { border-color: var(--accent); }
+  .add-row input::placeholder { color: var(--text2); }
+  .btn {
+    border: none; border-radius: 12px; padding: 0 18px;
+    background: var(--accent); color: #fff;
+    font-size: 14.5px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+
+  .edit-task {
+    display: flex; align-items: center; gap: 4px;
+    min-height: 56px;
+  }
+  .edit-task + .edit-task { border-top: 1px solid var(--divider); }
+  .edit-task .txt { flex: 1; font-size: 15.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini {
+    width: 36px; height: 36px; border-radius: 10px; border: none;
+    background: transparent; color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .mini:hover { background: var(--divider); }
+  .mini.del:hover { color: var(--danger); }
+
+  .done-item {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 56px;
+  }
+  .done-item + .done-item { border-top: 1px solid var(--divider); }
+  .done-item .col { flex: 1; min-width: 0; }
+  .done-item .t { font-size: 15px; color: var(--text2); text-decoration: line-through; }
+  .done-item .d { font-size: 12.5px; color: var(--text2); margin-top: 2px; }
+  .restore {
+    border: none; background: transparent; color: var(--accent);
+    font-size: 14px; font-weight: 700; cursor: pointer; flex: none;
+    font-family: inherit; padding: 8px;
+  }
+  .clear-all {
+    border: none; background: transparent; color: var(--danger);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 12px 0 4px; font-family: inherit;
+  }
+
+  .seg {
+    display: flex; background: var(--surface); border: 1px solid var(--divider);
+    border-radius: 14px; padding: 4px; margin-top: 10px;
+  }
+  .seg button {
+    flex: 1; border: none; border-radius: 10px; padding: 10px 0;
+    background: transparent; color: var(--text2);
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); }
+
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Макет приложения «Мои дела»</h1>
+  <p>Стиль «чистый список», изумрудный акцент. Тёмная тема включается автоматически (экран чисто-чёрный — бережёт батарею AMOLED).<br>
+  Чекбоксы на макете нажимаются — можно пощупать. Смотри и говори, что поменять: цвета, размеры, тексты, кнопку «+».</p>
+</div>
+
+<div class="frames">
+
+  <!-- ============ ГЛАВНЫЙ ЭКРАН, СВЕТЛАЯ ============ -->
+  <div class="figure">
+    <div class="phone">
+      <div class="screen light">
+        <div class="status">
+          <span>9:41</span>
+          <span class="icons">
+            <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4" y="4.5" width="3" height="7.5" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><rect x="0.5" y="0.5" width="18" height="11" rx="3" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="12" height="8" rx="1.5" fill="currentColor"/><rect x="20" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+          </span>
+        </div>
+        <div class="app-head">
+          <h2>Мои дела</h2>
+          <button class="icon-btn" title="Настройки">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></svg>
+          </button>
+        </div>
+        <div class="progress">
+          <div class="label">Выполнено <b>2 из 5</b></div>
+          <div class="bar"><i></i></div>
+        </div>
+        <div class="tasks">
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Оплатить интернет</span>
+          </div>
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Позвонить в сервисный центр</span>
+          </div>
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Купить продукты</span>
+          </div>
+          <div class="task done">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Полить цветы</span>
+          </div>
+          <div class="task done">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Забрать посылку</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Главный экран · светлая тема</div>
+  </div>
+
+  <!-- ============ ГЛАВНЫЙ ЭКРАН, ТЁМНАЯ (с плашкой «Отменить») ============ -->
+  <div class="figure">
+    <div class="phone">
+      <div class="screen dark">
+        <div class="status">
+          <span>9:41</span>
+          <span class="icons">
+            <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4" y="4.5" width="3" height="7.5" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><rect x="0.5" y="0.5" width="18" height="11" rx="3" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="12" height="8" rx="1.5" fill="currentColor"/><rect x="20" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+          </span>
+        </div>
+        <div class="app-head">
+          <h2>Мои дела</h2>
+          <button class="icon-btn" title="Настройки">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></svg>
+          </button>
+        </div>
+        <div class="progress">
+          <div class="label">Выполнено <b>2 из 5</b></div>
+          <div class="bar"><i></i></div>
+        </div>
+        <div class="tasks">
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Оплатить интернет</span>
+          </div>
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Позвонить в сервисный центр</span>
+          </div>
+          <div class="task">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Купить продукты</span>
+          </div>
+          <div class="task done">
+            <span class="check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg></span>
+            <span class="txt">Полить цветы</span>
+          </div>
+        </div>
+        <div class="snack">
+          <span>Дело выполнено</span>
+          <span class="undo">Отменить</span>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Главный экран · тёмная тема · плашка «Отменить»</div>
+  </div>
+
+  <!-- ============ НАСТРОЙКИ, СВЕТЛАЯ ============ -->
+  <div class="figure">
+    <div class="phone">
+      <div class="screen light">
+        <div class="status">
+          <span>9:41</span>
+          <span class="icons">
+            <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4" y="4.5" width="3" height="7.5" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><rect x="0.5" y="0.5" width="18" height="11" rx="3" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="12" height="8" rx="1.5" fill="currentColor"/><rect x="20" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+          </span>
+        </div>
+        <div class="nav-head">
+          <button class="icon-btn" title="Назад">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          </button>
+          <h2>Настройки</h2>
+        </div>
+        <div class="settings">
+          <div class="section">
+            <div class="sec-title">Список дел</div>
+            <div class="add-row">
+              <input type="text" placeholder="Новое дело">
+              <button class="btn">Добавить</button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Оплатить интернет</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Позвонить в сервисный центр</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Купить продукты</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <div class="section">
+            <div class="sec-title">Выполненные · 2</div>
+            <div class="done-item">
+              <div class="col">
+                <div class="t">Полить цветы</div>
+                <div class="d">28 сентября, 9:15</div>
+              </div>
+              <button class="restore">Вернуть</button>
+            </div>
+            <div class="done-item">
+              <div class="col">
+                <div class="t">Забрать посылку</div>
+                <div class="d">27 сентября, 18:40</div>
+              </div>
+              <button class="restore">Вернуть</button>
+            </div>
+            <button class="clear-all">Очистить всё</button>
+          </div>
+          <div class="section">
+            <div class="sec-title">Тема</div>
+            <div class="seg">
+              <button class="on">Системная</button>
+              <button>Светлая</button>
+              <button>Тёмная</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Настройки · светлая тема</div>
+  </div>
+
+  <!-- ============ НАСТРОЙКИ, ТЁМНАЯ ============ -->
+  <div class="figure">
+    <div class="phone">
+      <div class="screen dark">
+        <div class="status">
+          <span>9:41</span>
+          <span class="icons">
+            <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4" y="4.5" width="3" height="7.5" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity=".3"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><rect x="0.5" y="0.5" width="18" height="11" rx="3" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="12" height="8" rx="1.5" fill="currentColor"/><rect x="20" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>
+          </span>
+        </div>
+        <div class="nav-head">
+          <button class="icon-btn" title="Назад">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          </button>
+          <h2>Настройки</h2>
+        </div>
+        <div class="settings">
+          <div class="section">
+            <div class="sec-title">Список дел</div>
+            <div class="add-row">
+              <input type="text" placeholder="Новое дело">
+              <button class="btn">Добавить</button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Оплатить интернет</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Позвонить в сервисный центр</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="edit-task">
+              <span class="txt">Купить продукты</span>
+              <button class="mini" title="Выше"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              <button class="mini" title="Ниже"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+              <button class="mini del" title="Удалить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <div class="section">
+            <div class="sec-title">Выполненные · 2</div>
+            <div class="done-item">
+              <div class="col">
+                <div class="t">Полить цветы</div>
+                <div class="d">28 сентября, 9:15</div>
+              </div>
+              <button class="restore">Вернуть</button>
+            </div>
+            <div class="done-item">
+              <div class="col">
+                <div class="t">Забрать посылку</div>
+                <div class="d">27 сентября, 18:40</div>
+              </div>
+              <button class="restore">Вернуть</button>
+            </div>
+            <button class="clear-all">Очистить всё</button>
+          </div>
+          <div class="section">
+            <div class="sec-title">Тема</div>
+            <div class="seg">
+              <button>Системная</button>
+              <button>Светлая</button>
+              <button class="on">Тёмная</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Настройки · тёмная тема</div>
+  </div>
+
+</div>
+
+<script>
+  // лёгкая интерактивность, чтобы пощупать макет
+  document.querySelectorAll('.screen .task').forEach(function (t) {
+    t.addEventListener('click', function () { t.classList.toggle('done'); });
+  });
+  document.querySelectorAll('.seg').forEach(function (s) {
+    s.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        s.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+    });
+  });
+</script>
+</body>
+</html>
